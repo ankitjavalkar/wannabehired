@@ -1,5 +1,6 @@
 import requests
 import datetime
+import html
 
 from django.db import models
 
@@ -21,7 +22,6 @@ class Thread(models.Model):
 
     @classmethod
     def map_data_to_object(cls, data):
-        print(">>>>>>>", data.get('id'))
         return Thread(
             title=data.get('title', ''),
             text=data.get('text', ''),
@@ -122,7 +122,7 @@ class Job(models.Model):
         return Job(
             thread=thread,
             # title=cls.get_title(data.get(text)),
-            content=data.get('text'),
+            content=html.unescape(data.get('text')), # unescape the encoded HTML
             unique_id=data.get("id"),
             timestamp=datetime.datetime.fromtimestamp(
                 data.get("time")
