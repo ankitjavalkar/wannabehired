@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+    {% for job in jobs %}
+        <div class="card">
+          <div class="card-body">
+            <p class="card-text">{{ job.content | safe}}</p>
+            <a href="#" class="btn btn-primary">Like</a>
+          </div>
+          <div class="card-footer text-muted">
+            {{ job.timestamp }}
+          </div>
+        </div>
+    {% endfor %}
+{% endblock %}
