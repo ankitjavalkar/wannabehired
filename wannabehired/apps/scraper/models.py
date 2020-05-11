@@ -13,12 +13,27 @@ class Thread(models.Model):
     Model to hold information about the monthly job list
     """
 
+    WIH_STRING = 'Who is hiring?'
+    FSF_STRING = 'Freelancer? Seeking freelancer?'
+    WWTBH_STRING = 'Who wants to be hired?'
+
+    class ThreadType(models.TextChoices):
+        WIH = 'wih', 'Who Is Hiring'
+        FSF = 'fsf', 'Freelancer / Seeking Freelancer'
+        WWTBH = 'wwtbh', 'Who Wants To Be Hired'
+
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     title = models.CharField(max_length=100)
     text = models.TextField()
     unique_id = models.CharField(max_length=100)
     timestamp = models.DateTimeField()
+    thread_type = models.CharField(
+        max_length=10,
+        choices=ThreadType.choices,
+        blank=True,
+        null=True,
+    )
 
     @classmethod
     def map_data_to_object(cls, data):
@@ -28,8 +43,19 @@ class Thread(models.Model):
             unique_id=data.get("id"),
             timestamp=datetime.datetime.fromtimestamp(
                 data.get("time", 0)
-            )
+            ),
+            thread_type=cls.get_type(data.get('title', ''))
         )
+
+    @classmethod
+    def get_type(cls, title):
+        if cls.WIH_STRING in title:
+            return cls.ThreadType.WIH
+        elif cls.FSF_STRING in title:
+            return cls.ThreadType.FSF
+        elif cls.WWTBH_STRING in title:
+            return cls.ThreadType.WWTBH
+        return None
 
     @classmethod
     def fetch_new_thread_ids(cls):
