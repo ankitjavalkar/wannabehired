@@ -1,4 +1,3 @@
-import requests
 import datetime
 import html
 
@@ -130,6 +129,10 @@ class Thread(models.Model):
         new_jobs = self.fetch_new_jobs()
         Job.create_jobs(new_jobs)
 
+    def __str__(self):
+        thread_type = self.get_thread_type_display()
+        readable_time = self.timestamp.strftime("%d-%m-%Y")
+        return "{} | {}".format(thread_type, readable_time)
 
 class Job(models.Model):
     """
@@ -138,31 +141,35 @@ class Job(models.Model):
 
     created_on = models.DateTimeField(auto_now_add=True)
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
-    # title = models.CharField(max_length=254)
+    title = models.CharField(max_length=254)
     content = models.TextField()
     unique_id = models.CharField(max_length=100)
     timestamp = models.DateTimeField()
 
     @classmethod
     def map_data_to_object(cls, thread, data):
+        title = cls.get_title_and_content(data.get("text"))[0]
+        content = cls.get_title_and_content(data.get("text"))[1]
         return Job(
             thread=thread,
-            # title=cls.get_title(data.get(text)),
-            content=html.unescape(data.get('text')), # unescape the encoded HTML
+            title=title,
+            content=html.unescape(content), # unescape the encoded HTML
             unique_id=data.get("id"),
             timestamp=datetime.datetime.fromtimestamp(
                 data.get("time")
             )
         )
 
-    # @classmethod
-    # def get_title(cls, text):
-    #     return text.split('<p>', 1)[0]
-
-    # @classmethod
-    # def get_content(cls, text):
-    #     return text.split('<p>', 1)[1]
+    @classmethod
+    def get_title_and_content(cls, text):
+        text_split = text.split('<p>', 1)
+        if not len(text_split) > 1:
+            return '', text_split[0]
+        return text_split
 
     @classmethod
     def create_jobs(cls, jobs):
         cls.objects.bulk_create(jobs)
+
+    def __str__(self):
+        return "{} | {}".format(self.thread, self.title[:50])
