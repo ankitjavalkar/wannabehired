@@ -3,11 +3,13 @@ import datetime
 import html
 
 from django.db import models
+from django.utils import timezone
 
 from .utils import (API_URL_MAP, fetch_post_data_from_api,
     fetch_thread_ids_from_api, fetch_comment_ids_from_api, DeletedPostError,
     fetch_posts_data_from_api
 )
+
 
 class Thread(models.Model):
     """
@@ -43,7 +45,7 @@ class Thread(models.Model):
             text=data.get('text', ''),
             unique_id=data.get("id"),
             timestamp=datetime.datetime.fromtimestamp(
-                data.get("time", 0)
+                data.get("time", 0), tz=timezone.utc
             ),
             thread_type=cls.get_type(data.get('title', ''))
         )
@@ -62,7 +64,7 @@ class Thread(models.Model):
     def fetch_new_thread_ids(cls):
         thread_ids = cls.objects.all().values_list('unique_id', flat=True)
         updated_thread_ids = asyncio.run(fetch_thread_ids_from_api())
-        new_thread_ids = [_id for _id in list(updated_thread_ids) if _id not in list(thread_ids)]
+        new_thread_ids = [_id for _id in list(updated_thread_ids) if str(_id) not in list(thread_ids)]
         return new_thread_ids
 
     @classmethod
@@ -80,7 +82,7 @@ class Thread(models.Model):
     @classmethod
     def fetch_threads(cls, unique_ids):
         threads = []
-        thread_data = asyncio.run(fetch_posts_data_from_api(unique_id))
+        data = asyncio.run(fetch_posts_data_from_api(unique_ids))
         for thread_data in data:
             if thread_data:
                 thread = Thread.map_data_to_object(thread_data)
@@ -99,6 +101,7 @@ class Thread(models.Model):
     def update_new_threads(cls):
         threads = cls.fetch_new_threads()
         cls.objects.bulk_create(threads)
+        return threads
 
     @classmethod
     def fetch_job(cls, thread, unique_id):
@@ -166,7 +169,7 @@ class Job(models.Model):
             content=html.unescape(content), # unescape the encoded HTML
             unique_id=data.get("id"),
             timestamp=datetime.datetime.fromtimestamp(
-                data.get("time")
+                data.get("time"), tz=timezone.utc
             )
         )
 
